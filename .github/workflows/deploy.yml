@@ -38,10 +38,9 @@ jobs:
 
       - name: Create deployment package
         run: |
-          mkdir deployment
+          mkdir -p deployment/target
           cp appspec.yml deployment/
           cp -r scripts deployment/
-          mkdir deployment/target
           cp target/*.jar deployment/target/
           cd deployment
           zip -r ../student-management-${{ github.sha }}.zip .
@@ -54,8 +53,14 @@ jobs:
 
       - name: Upload deployment package to S3
         run: |
-          aws s3 cp student-management-${{ github.sha }}.zip s3://${{ env.S3_BUCKET }}/student-management-${{ github.sha }}.zip
+          aws s3 cp \
+            "student-management-${{ github.sha }}.zip" \
+            "s3://${{ env.S3_BUCKET }}/student-management-${{ github.sha }}.zip"
 
       - name: Create CodeDeploy deployment
         run: |
-          aws deploy create-deployment             --application-name "${{ env.CODEDEPLOY_APPLICATION }}"             --deployment-group-name "${{ env.CODEDEPLOY_DEPLOYMENT_GROUP }}"             --s3-location bucket=${{ env.S3_BUCKET }},key=student-management-${{ github.sha }}.zip,bundleType=zip             --description "GitHub Actions deployment ${{ github.sha }}"
+          aws deploy create-deployment \
+            --application-name "${{ env.CODEDEPLOY_APPLICATION }}" \
+            --deployment-group-name "${{ env.CODEDEPLOY_DEPLOYMENT_GROUP }}" \
+            --s3-location "bucket=${{ env.S3_BUCKET }},key=student-management-${{ github.sha }}.zip,bundleType=zip" \
+            --description "GitHub Actions deployment ${{ github.sha }}"
