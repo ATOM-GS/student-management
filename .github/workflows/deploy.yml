@@ -1,0 +1,69 @@
+name: Student Management CI/CD
+
+on:
+push:
+branches:
+  - main
+
+permissions:
+id-token: write
+contents: read
+
+env:
+AWS_REGION: eu-north-1
+S3_BUCKET: student-management-deploy-2026-gsolunke
+CODEDEPLOY_APPLICATION: student-management
+CODEDEPLOY_DEPLOYMENT_GROUP: student-management-dg
+
+jobs:
+build-and-deploy:
+
+  ```
+runs-on: ubuntu-latest
+
+steps:
+
+  - name: Checkout source code
+    uses: actions/checkout@v4
+
+  - name: Setup Java 21
+    uses: actions/setup-java@v4
+    with:
+      distribution: temurin
+      java-version: '21'
+      cache: maven
+
+  - name: Run tests
+    run: mvn clean test
+
+  - name: Build Spring Boot application
+    run: mvn clean package -DskipTests
+
+  - name: Create deployment package
+    run: |
+      mkdir deployment
+      cp appspec.yml deployment/
+      cp -r scripts deployment/
+      cp target/*.jar deployment/
+      cd deployment
+      zip -r ../student-management-${{ github.sha }}.zip .
+
+  - name: Configure AWS credentials
+    uses: aws-actions/configure-aws-credentials@v4
+    with:
+      role-to-assume: arn:aws:iam::699114894712:role/GitHubActions-StudentManagement
+      aws-region: ${{ env.AWS_REGION }}
+
+  - name: Upload deployment package to S3
+    run: |
+      aws s3 cp \
+        student-management-${{ github.sha }}.zip \
+        s3://${{ env.S3_BUCKET }}/student-management-${{ github.sha }}.zip
+
+  - name: Create CodeDeploy deployment
+    run: |
+      aws deploy create-deployment \
+        --application-name "${{ env.CODEDEPLOY_APPLICATION }}" \
+        --deployment-group-name "${{ env.CODEDEPLOY_DEPLOYMENT_GROUP }}" \
+        --s3-location bucket=${{ env.S3_BUCKET }},key=student-management-${{ github.sha }}.zip,bundleType=zip \
+        --description "GitHub Actions deployment ${{ github.sha }}"
