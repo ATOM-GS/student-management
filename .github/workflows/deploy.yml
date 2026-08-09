@@ -17,12 +17,9 @@ CODEDEPLOY_DEPLOYMENT_GROUP: student-management-dg
 
 jobs:
 build-and-deploy:
-
-  ```
 runs-on: ubuntu-latest
 
 steps:
-
   - name: Checkout source code
     uses: actions/checkout@v4
 
@@ -44,7 +41,8 @@ steps:
       mkdir deployment
       cp appspec.yml deployment/
       cp -r scripts deployment/
-      cp target/*.jar deployment/
+      mkdir deployment/target
+      cp target/*.jar deployment/target/
       cd deployment
       zip -r ../student-management-${{ github.sha }}.zip .
 
